@@ -1,5 +1,5 @@
 import { useState } from "react";
-import {useDraggable} from '@dnd-kit/react';
+import {useDraggable, useDroppable} from '@dnd-kit/react';
 import "./App.css";
 
 type Draggable = {
@@ -36,14 +36,24 @@ const defaultDraggables: Draggable[] = [
 export default function App() {
   const [draggables, setDraggables] = useState<Draggable[]>(defaultDraggables);
   return (
-    <div className="h-screen w-screen flex justify-center items-center">
-      <div>
+    <div className="h-screen w-screen flex flex-col gap-4 justify-center items-center">
+      <DropZone />
+      <div className=" flex flex-wrap  gap-2 ">
         {draggables.map((draggable) => (
           <Draggable key={draggable.id} draggable={draggable} />
         ))}
       </div>
     </div>
   );
+}
+
+const DropZone = ()=>{
+  const {ref} = useDroppable({id:'dropZone'})
+  return(
+    <div className="border bg-amber-500 min-w-screen h-50">
+      d
+    </div>
+  )
 }
 
 const Draggable = ({ draggable }: { draggable: Draggable }) => {
