@@ -46,7 +46,11 @@ const defaultDraggables: DraggableProps[] = [
 ];
 
 const defaultDropZones: DropZone[] = [
-  { id: "dropZone", draggables: [] },
+  { id: "S", draggables: [] },
+  { id: "A", draggables: [] },
+  { id: "B", draggables: [] },
+  { id: "C", draggables: [] },
+  { id: "D", draggables: [] },
   {
     id: "free",
     draggables: defaultDraggables.map((draggable) => draggable.id),
@@ -160,15 +164,26 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen w-screen flex flex-col gap-4 justify-center items-center">
+    <div className="min-h-screen w-full bg-zinc-950  flex flex-col justify-center items-center gap-6 py-6 px-6">
       <DragDropProvider
         onDragEnd={handleDragEnd}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
       >
-        {dropZones.map((dz, index) => (
-          <Droppable key={index} dropZone={dz} />
-        ))}
+        <div className="w-full max-w-6xl border border-zinc-700">
+          {dropZones
+            .filter((dz) => dz.id !== "free")
+            .map((dz) => (
+              <Droppable key={dz.id} dropZone={dz} />
+            ))}
+        </div>
+        <div className="w-full max-w-6xl bg-zinc-800 border border-zinc-700 rounded-lg flex flex-col gap-3 p-4">
+          <p className="mb-3 text-sm font-medium text-zinc-400">
+            Available Characters
+          </p>
+
+          <FreeDropZone dropZone={dropZones.find((dz) => dz.id === "free")} />
+        </div>
 
         <DragOverlay>
           {activeDraggable && (
@@ -200,7 +215,10 @@ const Sortable = ({
   });
 
   return (
-    <button className="cursor-pointer" ref={ref}>
+    <button
+      className="cursor-grab active:cursor-grabbing h-28 shrink-0"
+      ref={ref}
+    >
       <DraggableContent draggable={draggable} isDragging={isDragging} />
     </button>
   );
@@ -209,10 +227,46 @@ const Sortable = ({
 const Droppable = ({ dropZone }: { dropZone: DropZone }) => {
   const { id, draggables } = dropZone;
   const { ref } = useDroppable({ id, type: "zone", accept: "card" });
+
+  const backgroundColor = dropZoneColorMap[id];
   return (
     <div
       ref={ref}
-      className="border bg-black min-w-screen h-50 flex gap-5 flex-wrap grow"
+      className="w-full h-32 bg-zinc-800 border-b border-zinc-950 flex"
+    >
+      <div
+        className="w-28 shrink-0 self-stretch flex justify-center items-center text-4xl font-bold text-zinc-950"
+        style={{ backgroundColor }}
+      >
+        {id}
+      </div>
+      <div className="flex-1 flex flex-wrap items-start gap-2 p-2">
+        {draggables.map((draggableId, index) => {
+          const draggable = defaultDraggables.find(
+            (draggable) => draggable.id === draggableId,
+          );
+          if (!draggable) return null;
+          return (
+            <Sortable
+              key={draggable.id}
+              draggable={draggable}
+              index={index}
+              group={id}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+const FreeDropZone = ({ dropZone }: { dropZone: DropZone }) => {
+  const { id, draggables } = dropZone;
+  const { ref } = useDroppable({ id, type: "zone", accept: "card" });
+
+  return (
+    <div
+      ref={ref}
+      className="w-full min-h-40 bg-zinc-900 rounded-md flex flex-wrap items-start justify-center gap-3 p-3"
     >
       {draggables.map((draggableId, index) => {
         const draggable = defaultDraggables.find(
@@ -232,24 +286,6 @@ const Droppable = ({ dropZone }: { dropZone: DropZone }) => {
   );
 };
 
-// const BottomArea = ({ draggables }: { draggables: DraggableProps[] }) => {
-//   const { ref } = useDroppable({ id: "bottomZone" });
-//   return (
-//     <div ref={ref} className=" flex flex-wrap  gap-2 ">
-//       {draggables
-//         .filter((draggable) => draggable.dz === undefined)
-//         .map((draggable, index) => (
-//           <Sortable
-//             key={draggable.id}
-//             index={index}
-//             draggable={draggable}
-//             group="bottomZone"
-//           />
-//         ))}
-//     </div>
-//   );
-// };
-
 const DraggableContent = ({
   draggable,
   isDragging,
@@ -257,13 +293,21 @@ const DraggableContent = ({
   draggable: DraggableProps;
   isDragging?: boolean;
 }) => {
-  const { id, src } = draggable;
+  const { src } = draggable;
   return (
     <img
       src={`/src/assets/${src}`}
       alt={src}
-      className="max-h-40"
+      className="h-full w-auto object-contain block"
       style={{ opacity: isDragging ? 0.2 : 1 }}
     />
   );
+};
+
+const dropZoneColorMap = {
+  S: "rgb(255, 120, 130)",
+  A: "rgb(255, 185, 120)",
+  B: "#FFF27A",
+  C: "rgb(165, 235, 120)",
+  D: "rgb(120, 220, 145)",
 };
