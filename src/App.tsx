@@ -2,7 +2,6 @@ import { useState } from "react";
 import {
   DragDropProvider,
   DragOverlay,
-  useDraggable,
   useDroppable,
   type DragEndEvent,
   type DragStartEvent,
@@ -14,37 +13,44 @@ import { atom, useAtom, useAtomValue } from "jotai";
 type DraggableProps = {
   id: string;
   src: string;
-  dz: undefined | string;
 };
-type SortableProps = {
+type DropZone = {
   id: string;
-  index: number;
+  draggables: string[];
 };
 
 const defaultDraggables: DraggableProps[] = [
-  { id: crypto.randomUUID(), src: "LeviAckermanCard.png", dz: undefined },
-  { id: crypto.randomUUID(), src: "MugenCard.png", dz: undefined },
-  { id: crypto.randomUUID(), src: "GojoSatoruCard.png", dz: undefined },
-  { id: crypto.randomUUID(), src: "NarutoUzumakiCard.png", dz: undefined },
-  { id: crypto.randomUUID(), src: "GutsCard.png", dz: undefined },
-  { id: crypto.randomUUID(), src: "MonkeyDLuffyCard.png", dz: undefined },
-  { id: crypto.randomUUID(), src: "RoronoaZoroCard.png", dz: undefined },
-  { id: crypto.randomUUID(), src: "ItachiUchihaCard.png", dz: undefined },
-  { id: crypto.randomUUID(), src: "KakashiHatakeCard.png", dz: undefined },
-  { id: crypto.randomUUID(), src: "EdwardElricCard.png", dz: undefined },
-  { id: crypto.randomUUID(), src: "SpikeSpiegelCard.png", dz: undefined },
-  { id: crypto.randomUUID(), src: "LightYagamiCard.png", dz: undefined },
-  { id: crypto.randomUUID(), src: "KenKanekiCard.png", dz: undefined },
-  { id: crypto.randomUUID(), src: "ErenYeagerCard.png", dz: undefined },
-  { id: crypto.randomUUID(), src: "MikasaAckermanCard.png", dz: undefined },
-  { id: crypto.randomUUID(), src: "VegetaCard.png", dz: undefined },
-  { id: crypto.randomUUID(), src: "TanjiroKamadoCard.png", dz: undefined },
-  { id: crypto.randomUUID(), src: "NezukoKamadoCard.png", dz: undefined },
-  { id: crypto.randomUUID(), src: "IchigoKurosakiCard.png", dz: undefined },
-  { id: crypto.randomUUID(), src: "JotaroKujoCard.png", dz: undefined },
-  { id: crypto.randomUUID(), src: "KilluaZoldyckCard.png", dz: undefined },
-  { id: crypto.randomUUID(), src: "GonFreecssCard.png", dz: undefined },
-  { id: crypto.randomUUID(), src: "SaitamaCard.png", dz: undefined },
+  { id: crypto.randomUUID(), src: "LeviAckermanCard.png" },
+  { id: crypto.randomUUID(), src: "MugenCard.png" },
+  { id: crypto.randomUUID(), src: "GojoSatoruCard.png" },
+  { id: crypto.randomUUID(), src: "NarutoUzumakiCard.png" },
+  { id: crypto.randomUUID(), src: "GutsCard.png" },
+  { id: crypto.randomUUID(), src: "MonkeyDLuffyCard.png" },
+  { id: crypto.randomUUID(), src: "RoronoaZoroCard.png" },
+  { id: crypto.randomUUID(), src: "ItachiUchihaCard.png" },
+  { id: crypto.randomUUID(), src: "KakashiHatakeCard.png" },
+  { id: crypto.randomUUID(), src: "EdwardElricCard.png" },
+  { id: crypto.randomUUID(), src: "SpikeSpiegelCard.png" },
+  { id: crypto.randomUUID(), src: "LightYagamiCard.png" },
+  { id: crypto.randomUUID(), src: "KenKanekiCard.png" },
+  { id: crypto.randomUUID(), src: "ErenYeagerCard.png" },
+  { id: crypto.randomUUID(), src: "MikasaAckermanCard.png" },
+  { id: crypto.randomUUID(), src: "VegetaCard.png" },
+  { id: crypto.randomUUID(), src: "TanjiroKamadoCard.png" },
+  { id: crypto.randomUUID(), src: "NezukoKamadoCard.png" },
+  { id: crypto.randomUUID(), src: "IchigoKurosakiCard.png" },
+  { id: crypto.randomUUID(), src: "JotaroKujoCard.png" },
+  { id: crypto.randomUUID(), src: "KilluaZoldyckCard.png" },
+  { id: crypto.randomUUID(), src: "GonFreecssCard.png" },
+  { id: crypto.randomUUID(), src: "SaitamaCard.png" },
+];
+
+const defaultDropZones: DropZone[] = [
+  { id: "dropZone", draggables: [] },
+  {
+    id: "free",
+    draggables: defaultDraggables.map((draggable) => draggable.id),
+  },
 ];
 
 const activeDraggableAtom = atom<DraggableProps>();
@@ -52,6 +58,8 @@ const activeDraggableAtom = atom<DraggableProps>();
 export default function App() {
   const [draggables, setDraggables] =
     useState<DraggableProps[]>(defaultDraggables);
+
+  const [dropZones, setDropZones] = useState<DropZone[]>(defaultDropZones);
 
   const [activeDraggable, setActiveDraggable] = useAtom(activeDraggableAtom);
 
@@ -67,65 +75,80 @@ export default function App() {
       setActiveDraggable(undefined);
       return;
     }
-    const { target, source } = event.operation;
+    const { source, target } = event.operation;
     const activeId = source.id as string;
     const overId = target.id as string;
 
-    const activeCard = draggables.find(
-      (draggable) => draggable.id === activeId,
-    );
-    if (!activeCard) return setActiveDraggable(undefined);
+    const fromZone = dropZones.find((dz) =>
+      dz.draggables.includes(activeId),
+    ).id;
 
-    const fromZone = activeCard.dz ?? "bottomZone";
+    const toZone = dropZones.find((dz) => {
+      return dz.id === overId || dz.draggables.includes(overId);
+    }).id;
 
-    const toZone =
-      overId === "dropZone" || overId === "bottomZone"
-        ? overId
-        : (draggables.find((draggable) => draggable.id === overId)?.dz ??
-          "bottomZone");
-
-    if (fromZone !== toZone) {
-      setDraggables((prev) =>
-        prev.map((draggable) =>
-          draggable.id !== activeId
-            ? draggable
+    // dropping card in empty part of any dropzone
+    if (dropZones.some((dz) => dz.id === overId)) {
+      setDropZones((prev) =>
+        prev.map((dz) => {
+          const cleanedDraggables = dz.draggables.filter(
+            (id) => id !== activeId,
+          );
+          return dz.id === overId
+            ? { ...dz, draggables: [...cleanedDraggables, activeId] }
             : {
-                ...draggable,
-                dz: toZone === "dropZone" ? "dropZone" : undefined,
-              },
-        ),
+                ...dz,
+                draggables: cleanedDraggables,
+              };
+        }),
       );
-    } else if (isSortable(source)) {
-      const zoneItems = draggables.filter(
-        (draggable) => (draggable.dz ?? "bottomZone") === fromZone,
-      );
+    }
+
+    // dropping card on another card in same zone
+    else if (fromZone === toZone && isSortable(source)) {
       const { initialIndex, index } = source;
-      const next = [...zoneItems];
 
-      console.log({
-        fromZone,
-        initialIndex,
-        index,
-        zoneLength: zoneItems.length,
-      });
+      if (initialIndex !== index) {
+        setDropZones((prev) =>
+          prev.map((dz) => {
+            if (dz.id !== toZone) {
+              return dz;
+            }
 
-      const [moved] = next.splice(initialIndex, 1);
-      next.splice(index, 0, moved);
+            const moved = dz.draggables[initialIndex];
+            const withoutMoved = dz.draggables.toSpliced(initialIndex, 1);
+            const next = withoutMoved.toSpliced(index, 0, moved);
 
-      console.log("moved:", moved);
-      console.log("next:", next);
+            return { ...dz, draggables: next };
+          }),
+        );
+      }
+    }
 
-      setDraggables((prev) => {
-        let i = 0;
-        return prev.map((draggable) => {
-          if ((draggable.dz ?? "bottomZone") !== fromZone) {
-            return draggable;
+    // dropping a card on to another card in a different zone
+    else if (fromZone !== toZone) {
+      const destinationIndex = dropZones
+        .find((dz) => dz.id === toZone)
+        .draggables.findIndex((id) => id === overId);
+
+      setDropZones((prev) =>
+        prev.map((dz) => {
+          const cleanedDraggables = dz.draggables.filter(
+            (id) => id !== activeId,
+          );
+          let newSortedDraggables;
+          if (dz.id === toZone) {
+            newSortedDraggables = cleanedDraggables.toSpliced(
+              destinationIndex,
+              0,
+              activeId,
+            );
           }
-          const newCard = next[i];
-          i++;
-          return newCard;
-        });
-      });
+          return dz.id === toZone
+            ? { ...dz, draggables: newSortedDraggables }
+            : { ...dz, draggables: cleanedDraggables };
+        }),
+      );
     }
     setActiveDraggable(undefined);
   };
@@ -133,9 +156,9 @@ export default function App() {
   return (
     <div className="h-screen w-screen flex flex-col gap-4 justify-center items-center">
       <DragDropProvider onDragEnd={handleDragEnd} onDragStart={handleDragStart}>
-        <Droppable draggables={draggables} />
-
-        <BottomArea draggables={draggables} />
+        {dropZones.map((dz, index) => (
+          <Droppable key={index} dropZone={dz} />
+        ))}
 
         <DragOverlay>
           {activeDraggable && (
@@ -167,44 +190,49 @@ const Sortable = ({
   );
 };
 
-const Droppable = ({ draggables }: { draggables: DraggableProps[] }) => {
-  const { ref } = useDroppable({ id: "dropZone" });
+const Droppable = ({ dropZone }: { dropZone: DropZone }) => {
+  const { id, draggables } = dropZone;
+  const { ref } = useDroppable({ id });
   return (
     <div
       ref={ref}
       className="border bg-black min-w-screen h-50 flex gap-5 flex-wrap grow"
     >
-      {draggables
-        .filter((draggable) => draggable.dz === "dropZone")
-        .map((draggable, index) => (
+      {draggables.map((draggableId, index) => {
+        const draggable = defaultDraggables.find(
+          (draggable) => draggable.id === draggableId,
+        );
+        if (!draggable) return null;
+        return (
           <Sortable
             key={draggable.id}
             draggable={draggable}
             index={index}
-            group="dropZone"
+            group={id}
           />
-        ))}
+        );
+      })}
     </div>
   );
 };
 
-const BottomArea = ({ draggables }: { draggables: DraggableProps[] }) => {
-  const { ref } = useDroppable({ id: "bottomZone" });
-  return (
-    <div ref={ref} className=" flex flex-wrap  gap-2 ">
-      {draggables
-        .filter((draggable) => draggable.dz === undefined)
-        .map((draggable, index) => (
-          <Sortable
-            key={draggable.id}
-            index={index}
-            draggable={draggable}
-            group="bottomZone"
-          />
-        ))}
-    </div>
-  );
-};
+// const BottomArea = ({ draggables }: { draggables: DraggableProps[] }) => {
+//   const { ref } = useDroppable({ id: "bottomZone" });
+//   return (
+//     <div ref={ref} className=" flex flex-wrap  gap-2 ">
+//       {draggables
+//         .filter((draggable) => draggable.dz === undefined)
+//         .map((draggable, index) => (
+//           <Sortable
+//             key={draggable.id}
+//             index={index}
+//             draggable={draggable}
+//             group="bottomZone"
+//           />
+//         ))}
+//     </div>
+//   );
+// };
 
 const DraggableContent = ({
   draggable,
