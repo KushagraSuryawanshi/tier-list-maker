@@ -5,7 +5,6 @@ import {
   useDraggable,
   useDroppable,
   type DragEndEvent,
-  type DragOverEvent,
   type DragStartEvent,
 } from "@dnd-kit/react";
 import "./App.css";
@@ -56,8 +55,6 @@ export default function App() {
 
   const [activeDraggable, setActiveDraggable] = useAtom(activeDraggableAtom);
 
-  
-
   const handleDragStart = (event: DragStartEvent) => {
     const activeDraggable = draggables.find(
       (draggable) => draggable.id === event.operation.source.id,
@@ -65,66 +62,81 @@ export default function App() {
     setActiveDraggable(activeDraggable);
   };
 
-    const handleDragOver = (event:DragOverEvent)=>{
-     console.log(event);
+  const handleDragEnd = (event: DragEndEvent) => {
+    if (event.canceled || !event.operation.target) {
+      setActiveDraggable(undefined);
+      return;
+    }
     const { target, source } = event.operation;
+    const activeId = source.id as string;
     const overId = target.id as string;
-    const activeDraggableId = source.id as string;
 
-    if (isSortable(source)) {
-      const { index, initialIndex } = source;
-      const droppedItems = draggables.filter(
-        (draggable) => draggable.dz === "dropZone",
+    const activeCard = draggables.find(
+      (draggable) => draggable.id === activeId,
+    );
+    if (!activeCard) return setActiveDraggable(undefined);
+
+    const fromZone = activeCard.dz ?? "bottomZone";
+
+    const toZone =
+      overId === "dropZone" || overId === "bottomZone"
+        ? overId
+        : (draggables.find((draggable) => draggable.id === overId)?.dz ??
+          "bottomZone");
+
+    if (fromZone !== toZone) {
+      setDraggables((prev) =>
+        prev.map((draggable) =>
+          draggable.id !== activeId
+            ? draggable
+            : {
+                ...draggable,
+                dz: toZone === "dropZone" ? "dropZone" : undefined,
+              },
+        ),
       );
-      const next = [...droppedItems];
+    } else if (isSortable(source)) {
+      const zoneItems = draggables.filter(
+        (draggable) => (draggable.dz ?? "bottomZone") === fromZone,
+      );
+      const { initialIndex, index } = source;
+      const next = [...zoneItems];
+
+      console.log({
+        fromZone,
+        initialIndex,
+        index,
+        zoneLength: zoneItems.length,
+      });
 
       const [moved] = next.splice(initialIndex, 1);
       next.splice(index, 0, moved);
 
-      let droppedIndex = 0;
-      const merged = draggables.map((draggable) => {
-        if (draggable.dz !== "dropZone") {
-          return draggable;
-        }
-        const reorderedDraggable = next[droppedIndex];
-        droppedIndex++;
+      console.log("moved:", moved);
+      console.log("next:", next);
 
-        return reorderedDraggable;
+      setDraggables((prev) => {
+        let i = 0;
+        return prev.map((draggable) => {
+          if ((draggable.dz ?? "bottomZone") !== fromZone) {
+            return draggable;
+          }
+          const newCard = next[i];
+          i++;
+          return newCard;
+        });
       });
-
-      setDraggables(merged);
-      setActiveDraggable(undefined);
-
-      return;
     }
-
-    setDraggables((prev) =>
-      prev.map((draggable) =>
-        draggable.id !== activeDraggableId
-          ? draggable
-          : { ...draggable, dz: overId },
-      ),
-    );
-  }
-
-  const handleDragEnd = (event: DragEndEvent) => {
-       if (event.canceled) return setActiveDraggable(undefined);
-
     setActiveDraggable(undefined);
   };
 
   return (
     <div className="h-screen w-screen flex flex-col gap-4 justify-center items-center">
-      <DragDropProvider onDragEnd={handleDragEnd} onDragStart={handleDragStart} onDragOver={handleDragOver}>
+      <DragDropProvider onDragEnd={handleDragEnd} onDragStart={handleDragStart}>
         <Droppable draggables={draggables} />
-        <div className=" flex flex-wrap  gap-2 ">
-          {draggables.map(
-            (draggable) =>
-              !draggable.dz && (
-                <Draggable key={draggable.id} draggable={draggable} />
-              ),
-          )}
-        </div>
+
+        <BottomArea draggables={draggables} />
+
         <DragOverlay>
           {activeDraggable && (
             <button className="cursor-pointer">
@@ -140,11 +152,13 @@ export default function App() {
 const Sortable = ({
   draggable,
   index,
+  group,
 }: {
   draggable: DraggableProps;
   index: number;
+  group: string;
 }) => {
-  const { ref } = useSortable({ id: draggable.id, index });
+  const { ref } = useSortable({ id: draggable.id, index, group });
 
   return (
     <button className="cursor-pointer" ref={ref}>
@@ -163,19 +177,32 @@ const Droppable = ({ draggables }: { draggables: DraggableProps[] }) => {
       {draggables
         .filter((draggable) => draggable.dz === "dropZone")
         .map((draggable, index) => (
-          <Sortable key={draggable.id} draggable={draggable} index={index} />
+          <Sortable
+            key={draggable.id}
+            draggable={draggable}
+            index={index}
+            group="dropZone"
+          />
         ))}
     </div>
   );
 };
 
-const Draggable = ({ draggable }: { draggable: DraggableProps }) => {
-  const { id, src } = draggable;
-  const { ref } = useDraggable({ id });
+const BottomArea = ({ draggables }: { draggables: DraggableProps[] }) => {
+  const { ref } = useDroppable({ id: "bottomZone" });
   return (
-    <button className="cursor-pointer" ref={ref}>
-      <DraggableContent draggable={draggable} />
-    </button>
+    <div ref={ref} className=" flex flex-wrap  gap-2 ">
+      {draggables
+        .filter((draggable) => draggable.dz === undefined)
+        .map((draggable, index) => (
+          <Sortable
+            key={draggable.id}
+            index={index}
+            draggable={draggable}
+            group="bottomZone"
+          />
+        ))}
+    </div>
   );
 };
 
