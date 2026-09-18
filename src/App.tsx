@@ -5,10 +5,10 @@ import {
   useDroppable,
   type DragEndEvent,
   type DragStartEvent,
+  type DragOverEvent,
 } from "@dnd-kit/react";
 import "./App.css";
 import { isSortable, useSortable } from "@dnd-kit/react/sortable";
-import { atom, useAtom, useAtomValue } from "jotai";
 
 type DraggableProps = {
   id: string;
@@ -53,16 +53,15 @@ const defaultDropZones: DropZone[] = [
   },
 ];
 
-const activeDraggableAtom = atom<DraggableProps>();
-
 export default function App() {
   const [draggables, setDraggables] =
     useState<DraggableProps[]>(defaultDraggables);
 
   const [dropZones, setDropZones] = useState<DropZone[]>(defaultDropZones);
 
-  const [activeDraggable, setActiveDraggable] = useAtom(activeDraggableAtom);
-
+  const [activeDraggable, setActiveDraggable] = useState<
+    DraggableProps | undefined
+  >();
   const handleDragStart = (event: DragStartEvent) => {
     const activeDraggable = draggables.find(
       (draggable) => draggable.id === event.operation.source.id,
@@ -70,12 +69,9 @@ export default function App() {
     setActiveDraggable(activeDraggable);
   };
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    if (event.canceled || !event.operation.target) {
-      setActiveDraggable(undefined);
-      return;
-    }
+  const handleDragOver = (event: DragOverEvent) => {
     const { source, target } = event.operation;
+    if (!target) return;
     const activeId = source.id as string;
     const overId = target.id as string;
 
@@ -106,18 +102,21 @@ export default function App() {
 
     // dropping card on another card in same zone
     else if (fromZone === toZone && isSortable(source)) {
-      const { initialIndex, index } = source;
+      const zone = dropZones.find((dz) => dz.id === toZone);
 
-      if (initialIndex !== index) {
+      const oldIndex = zone.draggables.findIndex((i) => i === activeId);
+      const newIndex = zone.draggables.findIndex((i) => i === overId);
+
+      if (oldIndex !== newIndex) {
         setDropZones((prev) =>
           prev.map((dz) => {
             if (dz.id !== toZone) {
               return dz;
             }
 
-            const moved = dz.draggables[initialIndex];
-            const withoutMoved = dz.draggables.toSpliced(initialIndex, 1);
-            const next = withoutMoved.toSpliced(index, 0, moved);
+            const moved = dz.draggables[oldIndex];
+            const withoutMoved = dz.draggables.toSpliced(oldIndex, 1);
+            const next = withoutMoved.toSpliced(newIndex, 0, moved);
 
             return { ...dz, draggables: next };
           }),
@@ -150,12 +149,23 @@ export default function App() {
         }),
       );
     }
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    if (event.canceled || !event.operation.target) {
+      setActiveDraggable(undefined);
+      return;
+    }
     setActiveDraggable(undefined);
   };
 
   return (
     <div className="h-screen w-screen flex flex-col gap-4 justify-center items-center">
-      <DragDropProvider onDragEnd={handleDragEnd} onDragStart={handleDragStart}>
+      <DragDropProvider
+        onDragEnd={handleDragEnd}
+        onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
+      >
         {dropZones.map((dz, index) => (
           <Droppable key={index} dropZone={dz} />
         ))}
@@ -163,7 +173,7 @@ export default function App() {
         <DragOverlay>
           {activeDraggable && (
             <button className="cursor-pointer">
-              <DraggableContent draggable={activeDraggable} isDragging />
+              <DraggableContent draggable={activeDraggable} />
             </button>
           )}
         </DragOverlay>
@@ -181,18 +191,24 @@ const Sortable = ({
   index: number;
   group: string;
 }) => {
-  const { ref } = useSortable({ id: draggable.id, index, group });
+  const { ref, isDragging } = useSortable({
+    id: draggable.id,
+    index,
+    group,
+    type: "card",
+    accept: "card",
+  });
 
   return (
     <button className="cursor-pointer" ref={ref}>
-      <DraggableContent draggable={draggable} />
+      <DraggableContent draggable={draggable} isDragging={isDragging} />
     </button>
   );
 };
 
 const Droppable = ({ dropZone }: { dropZone: DropZone }) => {
   const { id, draggables } = dropZone;
-  const { ref } = useDroppable({ id });
+  const { ref } = useDroppable({ id, type: "zone", accept: "card" });
   return (
     <div
       ref={ref}
@@ -242,13 +258,12 @@ const DraggableContent = ({
   isDragging?: boolean;
 }) => {
   const { id, src } = draggable;
-  const activeDraggableId = useAtomValue(activeDraggableAtom)?.id;
   return (
     <img
       src={`/src/assets/${src}`}
       alt={src}
       className="max-h-40"
-      style={{ opacity: isDragging || activeDraggableId !== id ? 1 : 0.2 }}
+      style={{ opacity: isDragging ? 0.2 : 1 }}
     />
   );
 };
