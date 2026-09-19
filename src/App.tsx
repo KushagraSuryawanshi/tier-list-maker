@@ -164,21 +164,21 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-zinc-950  flex flex-col justify-center items-center gap-6 py-6 px-6">
+    <div className="min-h-screen w-full bg-zinc-950 flex flex-col justify-start items-center gap-2 [@media(min-height:850px)]:gap-6 py-2 [@media(min-height:850px)]:py-6 px-3">
       <DragDropProvider
         onDragEnd={handleDragEnd}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
       >
-        <div className="w-full max-w-6xl border border-zinc-700">
+        <div className="w-full max-w-4xl xl:max-w-5xl 2xl:max-w-6xl border border-zinc-700">
           {dropZones
             .filter((dz) => dz.id !== "free")
             .map((dz) => (
               <Droppable key={dz.id} dropZone={dz} />
             ))}
         </div>
-        <div className="w-full max-w-6xl bg-zinc-800 border border-zinc-700 rounded-lg flex flex-col gap-3 p-4">
-          <p className="mb-3 text-sm font-medium text-zinc-400">
+        <div className="w-full max-w-4xl xl:max-w-5xl 2xl:max-w-6xl bg-zinc-800 border border-zinc-700 rounded-lg flex flex-col gap-1 [@media(min-height:850px)]:gap-3 p-2 [@media(min-height:850px)]:p-4">
+          <p className="mb-1 [@media(min-height:850px)]:mb-3 text-sm font-medium text-zinc-400">
             Available Characters
           </p>
 
@@ -216,7 +216,7 @@ const Sortable = ({
 
   return (
     <button
-      className="cursor-grab active:cursor-grabbing h-28 shrink-0"
+      className="cursor-grab active:cursor-grabbing h-16 [@media(min-height:850px)]:h-28 shrink-0"
       ref={ref}
     >
       <DraggableContent draggable={draggable} isDragging={isDragging} />
@@ -232,15 +232,15 @@ const Droppable = ({ dropZone }: { dropZone: DropZone }) => {
   return (
     <div
       ref={ref}
-      className="w-full h-32 bg-zinc-800 border-b border-zinc-950 flex"
+      className="w-full min-h-20 [@media(min-height:850px)]:min-h-32 bg-zinc-800 border-b border-zinc-950 flex"
     >
       <div
-        className="w-28 shrink-0 self-stretch flex justify-center items-center text-4xl font-bold text-zinc-950"
+        className="w-16 [@media(min-height:850px)]:w-28 shrink-0 self-stretch flex justify-center items-center text-2xl [@media(min-height:850px)]:text-4xl font-bold text-zinc-950"
         style={{ backgroundColor }}
       >
         {id}
       </div>
-      <div className="flex-1 flex flex-wrap items-start gap-2 p-2">
+      <div className="flex-1 flex flex-wrap items-start gap-1 p-1 [@media(min-height:850px)]:gap-2 [@media(min-height:850px)]:p-2">
         {draggables.map((draggableId, index) => {
           const draggable = defaultDraggables.find(
             (draggable) => draggable.id === draggableId,
@@ -266,7 +266,7 @@ const FreeDropZone = ({ dropZone }: { dropZone: DropZone }) => {
   return (
     <div
       ref={ref}
-      className="w-full min-h-40 bg-zinc-900 rounded-md flex flex-wrap items-start justify-center gap-3 p-3"
+      className="w-full min-h-20 [@media(min-height:850px)]:min-h-40 bg-zinc-900 rounded-md flex flex-wrap items-start justify-center gap-1 [@media(min-height:850px)]:gap-3 p-1 [@media(min-height:850px)]:p-3"
     >
       {draggables.map((draggableId, index) => {
         const draggable = defaultDraggables.find(
