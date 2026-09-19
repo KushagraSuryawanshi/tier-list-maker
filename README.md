@@ -6,11 +6,7 @@ Nothing revolutionary here - pick up some anime characters, throw them into tier
 
 ## Demo
 
-<video src="./demo/tier-list-demo.mp4" controls width="100%"></video>
-
-If GitHub decides it does not want to behave with the embedded video:
-
-[Watch the demo](./demo/tier-list-demo.mp4)
+![Tier List Maker demo](./demo/tier-list-demo.gif)
 
 ## Why I built this
 
