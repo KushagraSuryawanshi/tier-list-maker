@@ -1,75 +1,77 @@
-# React + TypeScript + Vite
+# Tier List Maker
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A tiny side project I built to mess around with drag-and-drop again and get some React rust off.
 
-Currently, two official plugins are available:
+Nothing revolutionary here - pick up some anime characters, throw them into tiers, reorder them, regret your rankings, move them again.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Demo
 
-## React Compiler
+<video src="./demo/tier-list-demo.mp4" controls width="100%"></video>
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+If GitHub decides it does not want to behave with the embedded video:
 
-## Expanding the ESLint configuration
+[Watch the demo](./demo/tier-list-demo.mp4)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Why I built this
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+I mainly wanted to properly play around with the current `@dnd-kit/react` API instead of just watching someone else use it.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+Life has been pretty busy lately with semester coming to an end, assignments, tests, my part-time job and everything else going on at once. Somewhere in between all of that I could feel myself getting a bit rusty with actually sitting down and coding things by hand.
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+So I ended up taking some time out late at night, usually when I probably should've been sleeping, and built this.
 
+The app is intentionally small. Some parts might not be the absolute cleanest or most perfect implementation because, to be fair, I was probably half asleep while writing some of it 😭. But that wasn't really the goal here anyway. I just wanted to get my hands back on the keyboard, struggle through something myself, mess around with dnd-kit properly and get that coding rhythm back again.
+
+Built with:
+
+- React
+- TypeScript
+- Tailwind CSS
+- `@dnd-kit/react`
+- Bun
+
+## The part that fought back
+
+The first version looked simple enough: keep every card's current zone in state and update everything when the drag finished.
+
+That worked... until it didn't.
+
+Once sortable movement became more optimistic, React's state could fall behind what dnd-kit was already showing in the DOM. That eventually gave me some lovely `removeChild`, `insertBefore` and excessive update errors.
+
+The cleaner model ended up being:
+
+- card data only describes the card itself
+- each drop zone owns the ordered list of card IDs inside it
+- movement is synced during `onDragOver`
+- same-tier reordering uses the card's current position, not where the drag originally started
+- the drag overlay is kept separate from the original card
+
+Once those pieces were in place, the whole thing became a lot less cursed.
+
+## A few things I ended up caring about
+
+Even for something this small, I wanted the interactions to feel decent:
+
+- reorder cards inside the same tier
+- move cards between tiers
+- move cards back into the available pool
+- let crowded tiers wrap instead of creating ugly horizontal scrollbars
+- keep the original card faded while the drag overlay stays visible
+- make the layout behave reasonably across my laptop and larger monitor
+
+## Running it
+
+```bash
+bun install
+bun run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://npmx.dev/package/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://npmx.dev/package/eslint-plugin-react-dom) for React-specific lint rules:
+Then open the local Vite URL in the browser.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## One last thing
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+I wrote the implementation hands-on because that was basically the whole point of this project.
 
-```
+I did use AI a little as a thinking sidecar when dnd-kit and I started disagreeing about reality, but I deliberately avoided turning this into a "generate the app for me" exercise.
+
+Small project, but a pretty good reminder that even dragging a rectangle from A to B can become surprisingly interesting once state, ordering and multiple drop zones get involved.
